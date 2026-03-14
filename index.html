@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Claude Chat vs Claude Code — What's the Difference?</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0e0c0a;
+      --surface:     #181410;
+      --surface-2:   #211d18;
+      --border:      #2e2820;
+      --text:        #f0e8dc;
+      --text-dim:    #877970;
+      --chat-color:  #e8a046;
+      --chat-glow:   rgba(232, 160, 70, 0.15);
+      --chat-subtle: rgba(232, 160, 70, 0.06);
+      --code-color:  #3ec9b0;
+      --code-glow:   rgba(62, 201, 176, 0.15);
+      --code-subtle: rgba(62, 201, 176, 0.06);
+      --radius:      16px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Sora', sans-serif;
+      font-weight: 300;
+      line-height: 1.7;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Grain overlay ─────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 100;
+      opacity: .025;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-size: 200px 200px;
+    }
+
+    /* ── Ambient orbs ──────────────────────────────────── */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0;
+      animation: orbFade 1.8s ease forwards;
+    }
+    .orb-1 {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(232,160,70,.18), transparent 70%);
+      top: -150px; left: -150px;
+      animation-delay: 0.3s;
+    }
+    .orb-2 {
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(62,201,176,.15), transparent 70%);
+      bottom: -200px; right: -200px;
+      animation-delay: 0.6s;
+    }
+    @keyframes orbFade { to { opacity: 1; } }
+
+    /* ── Layout ────────────────────────────────────────── */
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 28px;
+    }
+
+    /* ── Hero ──────────────────────────────────────────── */
+    .hero {
+      text-align: center;
+      padding: 120px 0 80px;
+      opacity: 0;
+      transform: translateY(28px);
+      animation: fadeUp 0.9s cubic-bezier(.22,1,.36,1) 0.2s forwards;
+    }
+    .hero-eyebrow {
+      font-family: 'Sora', sans-serif;
+      font-size: .75rem;
+      font-weight: 500;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 24px;
+    }
+    .hero h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(3rem, 7vw, 5.5rem);
+      font-weight: 300;
+      line-height: 1.1;
+      letter-spacing: -.01em;
+      margin-bottom: 28px;
+    }
+    .hero h1 em {
+      font-style: italic;
+      color: var(--chat-color);
+    }
+    .hero h1 .code-hl { color: var(--code-color); }
+    .hero-sub {
+      font-size: 1.1rem;
+      color: var(--text-dim);
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    /* ── Divider ───────────────────────────────────────── */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border) 30%, var(--border) 70%, transparent);
+      margin: 16px 0 64px;
+    }
+
+    /* ── Cards ─────────────────────────────────────────── */
+    .cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 80px;
+    }
+    @media (max-width: 680px) { .cards { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 44px 40px 40px;
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(32px);
+      transition: transform 0.4s cubic-bezier(.22,1,.36,1), box-shadow 0.4s ease, border-color 0.3s ease;
+    }
+    .card.visible { animation: fadeUp 0.7s cubic-bezier(.22,1,.36,1) forwards; }
+    .card-chat.visible { animation-delay: 0.05s; }
+    .card-code.visible { animation-delay: 0.15s; }
+
+    .card:hover { transform: translateY(-6px); }
+    .card-chat:hover {
+      border-color: var(--chat-color);
+      box-shadow: 0 20px 60px var(--chat-glow), 0 0 0 1px rgba(232,160,70,.1);
+    }
+    .card-code:hover {
+      border-color: var(--code-color);
+      box-shadow: 0 20px 60px var(--code-glow), 0 0 0 1px rgba(62,201,176,.1);
+    }
+
+    /* Card corner accent */
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; right: 0;
+      width: 200px; height: 200px;
+      border-radius: 0 var(--radius) 0 100%;
+      opacity: .4;
+      pointer-events: none;
+    }
+    .card-chat::before { background: radial-gradient(circle at top right, var(--chat-glow), transparent 70%); }
+    .card-code::before { background: radial-gradient(circle at top right, var(--code-glow), transparent 70%); }
+
+    .card-icon {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 24px;
+    }
+    .card-chat .card-icon  { background: var(--chat-subtle);  border: 1px solid rgba(232,160,70,.2); }
+    .card-code .card-icon  { background: var(--code-subtle);  border: 1px solid rgba(62,201,176,.2); }
+
+    .card-label {
+      font-size: .7rem;
+      font-weight: 600;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .card-chat .card-label { color: var(--chat-color); }
+    .card-code .card-label { color: var(--code-color); }
+
+    .card h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2rem;
+      font-weight: 400;
+      margin-bottom: 10px;
+      line-height: 1.15;
+    }
+    .card-tagline {
+      font-size: .95rem;
+      color: var(--text-dim);
+      margin-bottom: 32px;
+      line-height: 1.6;
+    }
+
+    .card-features {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+    .card-features li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: .9rem;
+      color: #c8bfb4;
+      line-height: 1.55;
+    }
+    .card-features li::before {
+      content: '';
+      display: block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      margin-top: 8px;
+      flex-shrink: 0;
+    }
+    .card-chat .card-features li::before { background: var(--chat-color); }
+    .card-code .card-features li::before { background: var(--code-color); }
+
+    .card-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: .8rem;
+      font-weight: 500;
+      padding: 8px 16px;
+      border-radius: 100px;
+    }
+    .card-chat .card-badge {
+      background: var(--chat-subtle);
+      border: 1px solid rgba(232,160,70,.2);
+      color: var(--chat-color);
+    }
+    .card-code .card-badge {
+      background: var(--code-subtle);
+      border: 1px solid rgba(62,201,176,.2);
+      color: var(--code-color);
+    }
+
+    /* ── Section title ─────────────────────────────────── */
+    .section-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(1.8rem, 3.5vw, 2.5rem);
+      font-weight: 300;
+      text-align: center;
+      margin-bottom: 48px;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    .section-title.visible { animation: fadeUp 0.7s cubic-bezier(.22,1,.36,1) forwards; }
+    .section-title span { font-style: italic; }
+
+    /* ── Comparison table ──────────────────────────────── */
+    .table-wrap {
+      margin-bottom: 80px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    .table-wrap.visible { animation: fadeUp 0.7s cubic-bezier(.22,1,.36,1) 0.1s forwards; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .9rem;
+    }
+    thead tr {
+      background: var(--surface-2);
+    }
+    thead th {
+      padding: 18px 28px;
+      text-align: left;
+      font-weight: 500;
+      font-size: .75rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    thead th:nth-child(1) { color: var(--text-dim); width: 28%; }
+    thead th:nth-child(2) { color: var(--chat-color); }
+    thead th:nth-child(3) { color: var(--code-color); }
+
+    tbody tr {
+      border-top: 1px solid var(--border);
+      transition: background 0.2s;
+    }
+    tbody tr:hover { background: var(--surface-2); }
+    tbody td {
+      padding: 18px 28px;
+      vertical-align: top;
+      line-height: 1.6;
+      color: #c8bfb4;
+    }
+    tbody td:first-child {
+      font-weight: 500;
+      font-size: .8rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      padding-top: 20px;
+    }
+    @media (max-width: 600px) {
+      table, thead, tbody, tr, th, td { display: block; }
+      thead { display: none; }
+      tbody td { padding: 10px 20px; }
+      tbody td:first-child { padding-top: 18px; font-size: .7rem; color: var(--text-dim); }
+      tbody tr { padding-bottom: 12px; }
+    }
+
+    /* ── Decision section ──────────────────────────────── */
+    .decision {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 64px 56px;
+      margin-bottom: 80px;
+      opacity: 0;
+      transform: translateY(24px);
+      position: relative;
+      overflow: hidden;
+    }
+    .decision.visible { animation: fadeUp 0.7s cubic-bezier(.22,1,.36,1) 0.05s forwards; }
+    .decision::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, var(--chat-glow) 0%, transparent 50%, var(--code-glow) 100%);
+      pointer-events: none;
+    }
+    .decision-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      position: relative;
+    }
+    @media (max-width: 640px) { .decision-grid { grid-template-columns: 1fr; } .decision { padding: 44px 28px; } }
+
+    .decision-block { padding: 28px 32px; border-radius: 12px; }
+    .decision-chat { background: var(--chat-subtle); border: 1px solid rgba(232,160,70,.15); }
+    .decision-code { background: var(--code-subtle); border: 1px solid rgba(62,201,176,.15); }
+
+    .decision-block p {
+      font-size: .85rem;
+      font-weight: 500;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .decision-chat p { color: var(--chat-color); }
+    .decision-code p { color: var(--code-color); }
+
+    .decision-block h3 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.5rem;
+      font-weight: 400;
+      margin-bottom: 10px;
+      line-height: 1.3;
+    }
+    .decision-block span {
+      font-size: .9rem;
+      color: var(--text-dim);
+    }
+
+    /* ── Footer ────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 40px 0 60px;
+      border-top: 1px solid var(--border);
+      color: var(--text-dim);
+      font-size: .8rem;
+      letter-spacing: .08em;
+    }
+    footer a { color: var(--text-dim); text-decoration: none; transition: color .2s; }
+    footer a:hover { color: var(--text); }
+
+    /* ── Animations ────────────────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(28px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <div class="wrapper">
+
+    <!-- Hero -->
+    <section class="hero">
+      <p class="hero-eyebrow">Anthropic · Product Guide</p>
+      <h1>
+        <em>Claude Chat</em><br>
+        vs <span class="code-hl">Claude Code</span>
+      </h1>
+      <p class="hero-sub">Two powerful tools, built for very different needs. Here's how to tell them apart.</p>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Cards -->
+    <div class="cards">
+
+      <div class="card card-chat">
+        <div class="card-icon">💬</div>
+        <p class="card-label">Conversational AI</p>
+        <h2>Claude Chat</h2>
+        <p class="card-tagline">Your everyday AI assistant — available in a browser or app, ready to talk the moment you open it.</p>
+        <ul class="card-features">
+          <li>Have natural, back-and-forth conversations</li>
+          <li>Get help writing emails, essays, or creative work</li>
+          <li>Ask questions, brainstorm ideas, get explanations</li>
+          <li>Summarise documents or research topics</li>
+          <li>No technical knowledge required to get started</li>
+        </ul>
+        <span class="card-badge">✦ Best for everyday tasks &amp; writing</span>
+      </div>
+
+      <div class="card card-code">
+        <div class="card-icon">⌨️</div>
+        <p class="card-label">Agentic Coding Tool</p>
+        <h2>Claude Code</h2>
+        <p class="card-tagline">An AI that lives inside your development environment and does the actual work of building software.</p>
+        <ul class="card-features">
+          <li>Reads, writes, and edits files in your project</li>
+          <li>Runs commands and fixes bugs autonomously</li>
+          <li>Works directly inside your code editor or terminal</li>
+          <li>Handles multi-step coding tasks from start to finish</li>
+          <li>Built for software developers and engineers</li>
+        </ul>
+        <span class="card-badge">✦ Best for software development</span>
+      </div>
+
+    </div>
+
+    <!-- Comparison Table -->
+    <h2 class="section-title"><span>At a glance</span> — side by side</h2>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>💬 Claude Chat</th>
+            <th>⌨️ Claude Code</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Interface</td>
+            <td>Web browser or mobile app</td>
+            <td>Terminal, VS Code, or JetBrains IDE</td>
+          </tr>
+          <tr>
+            <td>Primary use</td>
+            <td>Conversation, writing, Q&amp;A</td>
+            <td>Building and editing software</td>
+          </tr>
+          <tr>
+            <td>Technical setup</td>
+            <td>None — just open a browser</td>
+            <td>Requires installation via command line</td>
+          </tr>
+          <tr>
+            <td>Works with files</td>
+            <td>You can upload files to share</td>
+            <td>Reads and writes your project files directly</td>
+          </tr>
+          <tr>
+            <td>Runs commands</td>
+            <td>No</td>
+            <td>Yes — can execute terminal commands</td>
+          </tr>
+          <tr>
+            <td>Best for</td>
+            <td>Everyone — no coding needed</td>
+            <td>Software developers &amp; engineers</td>
+          </tr>
+          <tr>
+            <td>Access</td>
+            <td>claude.ai</td>
+            <td>Via CLI (npm install -g @anthropic-ai/claude-code)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Decision CTA -->
+    <h2 class="section-title"><span>Which one</span> is right for you?</h2>
+
+    <div class="decision">
+      <div class="decision-grid">
+        <div class="decision-block decision-chat">
+          <p>Choose Claude Chat if…</p>
+          <h3>You want a smart, helpful assistant for everyday life</h3>
+          <span>Writing, research, brainstorming, learning, creative work — Claude Chat handles it all through simple conversation.</span>
+        </div>
+        <div class="decision-block decision-code">
+          <p>Choose Claude Code if…</p>
+          <h3>You're a developer who wants AI to do the heavy lifting</h3>
+          <span>Editing codebases, fixing bugs, running tests, building features — Claude Code works directly inside your tools.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+      <p>Built with <a href="https://claude.ai" target="_blank" rel="noopener">Claude</a> · 2026 · Anthropic</p>
+    </footer>
+
+  </div>
+
+  <script>
+    // Intersection Observer for scroll animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(el => {
+        if (el.isIntersecting) {
+          el.target.classList.add('visible');
+          observer.unobserve(el.target);
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.card, .section-title, .table-wrap, .decision').forEach(el => {
+      observer.observe(el);
+    });
+  </script>
+</body>
+</html>
